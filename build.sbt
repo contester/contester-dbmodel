@@ -5,7 +5,7 @@ javaOptions in run ++= Seq("-XX:+HeapDumpOnOutOfMemoryError", "-Xloggc:gclog.txt
 
 scalaVersion := "2.12.12"
 
-version := "2020.0.1"
+version := "2020.0.1-SNAPSHOT"
 
 organization := "org.stingray.contester"
 
@@ -31,7 +31,7 @@ resolvers ++= Seq(
   Resolver.typesafeRepo("releases")
 )
 
-val slickPG = "0.19.0"
+val slickPG = "0.19.2"
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-async" % "0.10.0",
@@ -39,7 +39,7 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.24.0",
   "com.typesafe.slick" %% "slick" % "3.3.2",
   "com.typesafe.slick" %% "slick-hikaricp" % "3.3.2",
-  "org.postgresql" % "postgresql" % "42.2.12",
+  "org.postgresql" % "postgresql" % "42.2.14",
   "com.github.tminglei" %% "slick-pg" % slickPG,
   "com.github.tminglei" %% "slick-pg_joda-time" % slickPG,
   "com.github.tminglei" %% "slick-pg_play-json" % slickPG,

@@ -18,6 +18,9 @@ case class ClarificationRequest(id: Long, contest: Int, team: Int, problem: Stri
   } else "..."
 }
 
+case class AdminEntry(username: String, password: String, spectator: String, administrator: String,
+                      locations: String, unrestricted: String)
+
 case class Compiler(id: Int, name: String, ext: String)
 
 case class School(id: Int, name: String, fullName: String)
@@ -517,4 +520,19 @@ object SlickModel {
   }
 
   val waiterTaskRecords = TableQuery[WaiterTaskRecords]
+
+  case class Admins(tag: Tag) extends Table[AdminEntry](tag, "admins") {
+    def username = column[String]("username", O.PrimaryKey)
+    def password = column[String]("password")
+    def spectator = column[String]("spectator")
+    def administrator = column[String]("administrator")
+    def locations = column[String]("locations")
+    def unrestricted = column[String]("unrestricted_view")
+
+    override def * = (username, password, spectator, administrator, locations, unrestricted) <> (AdminEntry.tupled, AdminEntry.unapply)
+  }
+
+  private[this] val admins = TableQuery[Admins]
+  val adminQuery = Compiled((username: Rep[String], passwordHash: Rep[String]) =>
+    admins.filter(x => x.username === username && x.password === passwordHash).take(1))
 }
