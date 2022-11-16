@@ -151,8 +151,12 @@ object SlickModel {
 
   val clarifications = TableQuery[Clarifications]
 
-  def getClarificationsForContest(contestId: Int) =
-    clarifications.filter(_.contest === contestId).sortBy(_.arrived.desc)
+  val getClarificationsForContest = Compiled((contestId: Rep[Int]) =>
+    clarifications.filter(_.contest === contestId).sortBy(_.arrived.desc))
+
+  val clarificationByID = Compiled((clarificationID: Rep[Long]) =>
+    clarifications.filter(_.id === clarificationID).take(1)
+  )
 
   case class ClarificationRequests(tag: Tag) extends Table[ClarificationRequest](tag, "clarification_requests") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -217,11 +221,22 @@ object SlickModel {
       polygonId, language, schoolMode) <> (Contest.tupled, Contest.unapply)
   }
 
-  val contests = TableQuery[Contests]
+  private[this] val contests = TableQuery[Contests]
 
-  val contests0 = for {
+  private[this] val contests0 = for {
     c <- contests
   } yield LiftedContest(c.id, c.name, c.startTime, c.freezeTime, c.endTime, c.exposeTime, c.polygonId, c.language, c.schoolMode)
+
+  val allContests = Compiled(contests.sortBy(_.id))
+
+  val getContestByID = Compiled((contestID: Rep[Int]) =>
+    contests.filter(_.id === contestID).take(1)
+  )
+
+  val getContestByIDToResync = Compiled((contestID: Rep[Int]) =>
+    contests.filter(_.id === contestID).map(x => (x.name, x.schoolMode, x.startTime, x.freezeTime, x.endTime, x.exposeTime, x.polygonId, x.language))
+  )
+
 
   case class Schools(tag: Tag) extends Table[School](tag, "schools") {
     def id = column[Int]("id", O.AutoInc, O.PrimaryKey)
@@ -255,7 +270,6 @@ object SlickModel {
   }
 
   val participants = TableQuery[Participants]
-
 
   case class Assignments(tag: Tag) extends Table[Assignment](tag, "logins") {
     def contest = column[Int]("contest")
@@ -347,6 +361,8 @@ object SlickModel {
     def tests = column[Int]("tests")
     def name = column[String]("name")
 
+    def pk = primaryKey("problems_pkey", (contestID, id))
+
     def * = (contestID, id, name, tests) <> (Problem.tupled, Problem.unapply)
   }
 
@@ -370,6 +386,27 @@ object SlickModel {
     lang <- compilers if s.language === lang.id
   } yield LiftedSubmit(s.id, s.arrived, s.arrived - contest.startTime, s.arrived > contest.freezeTime,
     s.team, s.contest, s.problem, lang.moduleID, s.tested, s.compiled, s.passed, s.taken, s.testingID)).sortBy(_.arrived)
+
+  val submits0ByContest= Compiled((contestID: Rep[Int]) =>
+    submits0.filter(_.contestID === contestID))
+
+  val submits0ByContestTeam = Compiled((contestID: Rep[Int], teamID: Rep[Int]) =>
+    submits0.filter(x => (x.contestID === contestID && x.teamID === teamID)))
+
+  val submits0ByContestTeamProblem = Compiled((contestID: Rep[Int], teamID: Rep[Int], problemID: Rep[String]) =>
+    submits0.filter(x => (x.contestID === contestID && x.teamID === teamID && x.problemID === problemID)))
+
+  val shortSubmitByID = Compiled((submitID: Rep[Long]) =>
+    submits.filter(_.id === submitID).map(x => (x.contest, x.team, x.problem, x.source)).take(1)
+  )
+
+  val results0ByTesting = Compiled((testingID: Rep[Long]) =>
+    results0.filter(_.testingID === testingID)
+  )
+
+  val testingByID = Compiled((testingID: Rep[Long]) =>
+    testings.filter(_.id === testingID).take(1)
+  )
 
   case class Testing(id: Int, submit: Int, start: DateTime, finish: Option[DateTime], problemId: Option[String])
 
@@ -432,6 +469,10 @@ object SlickModel {
     l <- compLocations if p.computer === l.id
   } yield LiftedLocatedPrintJob(p.id, p.contest, p.team, p.filename, p.arrived, p.printed, l.name, p.error)).sortBy(_.arrived.desc)
 
+  val locatedPrintJobsByContest = Compiled((contestID: Rep[Int]) =>
+    locatedPrintJobs.filter(_.contest === contestID)
+  )
+
   case class CustomTests(tag: Tag) extends Table[(Long, Int, Int, Int, Array[Byte], Array[Byte], Array[Byte], DateTime,
     Option[DateTime], Int, TimeMs, Memory, Long)](tag, "custom_test") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
@@ -484,6 +525,8 @@ object SlickModel {
   }
 
   val results = TableQuery[Results]
+
+  val headResultByTesting = Compiled((testingID: Rep[Long]) => SlickModel.results.filter(_.testingID === testingID).sortBy(_.testID.desc).take(1))
 
   case class DBResultEntry(testingID: Long, testID: Int, resultCode: Int, recordTime: DateTime, timeMs: TimeMs, memoryBytes:Memory,
                            returnCode: Long, testerOutput: Array[Byte], testerError: Array[Byte], testerReturnCode: Long)
