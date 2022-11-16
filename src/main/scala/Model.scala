@@ -221,7 +221,7 @@ object SlickModel {
       polygonId, language, schoolMode) <> (Contest.tupled, Contest.unapply)
   }
 
-  private[this] val contests = TableQuery[Contests]
+  val contests = TableQuery[Contests]
 
   private[this] val contests0 = for {
     c <- contests
