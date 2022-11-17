@@ -266,6 +266,7 @@ object SlickModel {
     def noPrint = column[Boolean]("no_print")
     def notRated = column[Boolean]("not_rated")
 
+    def pk = primaryKey("participants_pkey", (contest, team))
     override def * = (contest, team, disabled, noPrint, notRated) <> (Participant.tupled, Participant.unapply)
   }
 
@@ -274,7 +275,7 @@ object SlickModel {
   case class Assignments(tag: Tag) extends Table[Assignment](tag, "logins") {
     def contest = column[Int]("contest")
     def team = column[Int]("team")
-    def username = column[String]("username")
+    def username = column[String]("username", O.PrimaryKey)
     def password = column[String]("password")
 
     override def * = (contest, team, username, password) <> (Assignment.tupled, Assignment.unapply)
@@ -294,7 +295,7 @@ object SlickModel {
   val extraInfos = TableQuery[ExtraInfos]
 
   case class Messages2(tag: Tag) extends Table[Message2](tag, "messages") {
-    def id = column[Int]("id", O.AutoInc)
+    def id = column[Int]("id", O.AutoInc, O.PrimaryKey)
     def contest = column[Int]("contest")
     def team = column[Int]("team")
     def kind = column[String]("kind")
@@ -304,7 +305,15 @@ object SlickModel {
     override def * = (id.?, contest, team, kind, value, seen) <> (Message2.tupled, Message2.unapply)
   }
 
-  val messages2 = TableQuery[Messages2]
+  private[this] val messages2 = TableQuery[Messages2]
+
+  val allMessages = Compiled(messages2.map(identity))
+
+  val messages2Add = messages2 returning messages2.map(_.id) into ((user, id) => user.copy(id=Some(id)))
+
+  val messages2Unseen = Compiled(messages2.filterNot(_.seen))
+
+  val messageSeenByID = Compiled((id: Rep[Int]) => messages2.filter(_.id === id).map(_.seen))
 
   case class LiftedLocalTeam(teamId: Rep[Int], contest: Rep[Int], schoolName: Rep[String], teamNum: Rep[Int],
                              teamName: Rep[String], notRated: Rep[Boolean], noPrint: Rep[Boolean],
