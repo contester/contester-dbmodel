@@ -23,7 +23,7 @@ case class AdminEntry(username: String, password: String, spectator: String, adm
 
 case class Compiler(id: Int, name: String, ext: String)
 
-case class School(id: Int, name: String, fullName: String)
+case class School(id: Int, shortName: String, fullName: String)
 
 case class Message2(id: Option[Int], contest: Int, team: Int, kind: String, data: JsValue, seen: Boolean)
 
@@ -62,7 +62,8 @@ case class Contest(id: Int, name: String, startTime: DateTime, freezeTime: DateT
 }
 
 trait Team {
-  def schoolName: String
+  def schoolFullName: String
+  def schoolShortName: String
   def teamNum: Int
   def teamName: String
   def notRated: Boolean
@@ -72,15 +73,14 @@ trait Team {
     s" #$teamNum"
   } else ""
 
-  def schoolNameWithNum: String = s"$schoolName$teamSuffix"
+  def schoolFullNameWithNum: String = s"$schoolFullName$teamSuffix"
   def teamFullName: String = {
-    schoolNameWithNum +
-      (if (!teamName.isEmpty) s": $teamName"
-      else "")
+    if (teamName.isEmpty) schoolFullNameWithNum
+    else s"$schoolFullNameWithNum: $teamName"
   }
 }
 
-case class LocalTeam(id: Int, contest: Int, schoolName: String, teamNum: Int, teamName: String,
+final case class LocalTeam(id: Int, contest: Int, schoolFullName: String, schoolShortName: String, teamNum: Int, teamName: String,
                      notRated: Boolean, noPrint: Boolean, disabled: Boolean) extends Team
 
 case class ContestTeamIds(contestId: Int, teamId: Int)
@@ -111,7 +111,7 @@ case class EvalEntry(id: Long, contest: Int, team: Int, languageName: String, so
                      output: Array[Byte], arrived: DateTime, finishTime: Option[DateTime], resultCode: Int,
                      timex: TimeMs, memory: Memory, returnCode: Long) {
   private[this] def trimStr(s: Array[Byte]) = {
-    val x = new String(input, Charset.forName("CP1251"))
+    val x = new String(s, Charset.forName("CP1251"))
     if (x.length > 1024) {
       x.substring(0, 1024) + "\n..."
     } else x
@@ -198,7 +198,7 @@ object SlickModel {
 
   val compilers = TableQuery[Compilers]
 
-  val sortedCompilers = compilers.sortBy(_.name)
+  val sortedCompilers = Compiled(compilers.sortBy(_.name))
 
   case class LiftedContest(id: Rep[Int], name: Rep[String], startTime: Rep[DateTime],
                            freezeTime: Rep[DateTime], endTime: Rep[DateTime], exposeTime: Rep[DateTime],
@@ -240,10 +240,10 @@ object SlickModel {
 
   case class Schools(tag: Tag) extends Table[School](tag, "schools") {
     def id = column[Int]("id", O.AutoInc, O.PrimaryKey)
-    def name = column[String]("short_name")
+    def shortName = column[String]("short_name")
     def fullName = column[String]("full_name")
 
-    override def * = (id, name, fullName) <> (School.tupled, School.unapply)
+    override def * = (id, shortName, fullName) <> (School.tupled, School.unapply)
   }
 
   val schools = TableQuery[Schools]
@@ -315,7 +315,7 @@ object SlickModel {
 
   val messageSeenByID = Compiled((id: Rep[Int]) => messages2.filter(_.id === id).map(_.seen))
 
-  case class LiftedLocalTeam(teamId: Rep[Int], contest: Rep[Int], schoolName: Rep[String], teamNum: Rep[Int],
+  case class LiftedLocalTeam(teamId: Rep[Int], contest: Rep[Int], schoolFullName: Rep[String], schoolShortName: Rep[String], teamNum: Rep[Int],
                              teamName: Rep[String], notRated: Rep[Boolean], noPrint: Rep[Boolean],
                              disabled: Rep[Boolean])
 
@@ -323,7 +323,7 @@ object SlickModel {
 
   val localTeamQuery = for {
     ((p, t), s) <- participants join teams on (_.team === _.id) join schools on (_._2.school === _.id)
-  } yield LiftedLocalTeam(p.team, p.contest, s.name, t.num, t.name, p.notRated, p.noPrint, p.disabled)
+  } yield LiftedLocalTeam(p.team, p.contest, s.fullName, s.shortName, t.num, t.name, p.notRated, p.noPrint, p.disabled)
 
   case class LoggedInTeam0(username: String, password: String,  contest: Contest, team: LocalTeam)
 
@@ -454,10 +454,10 @@ object SlickModel {
 
   case class LiftedLocatedPrintJob(id: Rep[Long], contest: Rep[Int], team: Rep[Int], filename: Rep[String],
                                    arrived: Rep[DateTime], printed: Rep[Option[DateTime]], computerName: Rep[String],
-                                   error: Rep[String])
+                                   pages: Rep[Int], error: Rep[String])
 
   case class LocatedPrintJob(id: Long, contest: Int, team: Int, filename: String, arrived: DateTime,
-                             printed: Option[DateTime], computerName: String, error: String)
+                             printed: Option[DateTime], computerName: String, pages: Int, error: String)
 
   implicit object CustomPrintJobShape extends CaseClassShape(LiftedLocatedPrintJob.tupled, LocatedPrintJob.tupled)
 
@@ -476,17 +476,18 @@ object SlickModel {
   val locatedPrintJobs = (for {
     p <- dbPrintJobs
     l <- compLocations if p.computer === l.id
-  } yield LiftedLocatedPrintJob(p.id, p.contest, p.team, p.filename, p.arrived, p.printed, l.name, p.error)).sortBy(_.arrived.desc)
+  } yield LiftedLocatedPrintJob(p.id, p.contest, p.team, p.filename, p.arrived, p.printed, l.name, p.pages, p.error)).sortBy(_.arrived.desc)
 
   val locatedPrintJobsByContest = Compiled((contestID: Rep[Int]) =>
     locatedPrintJobs.filter(_.contest === contestID)
   )
 
-  case class CustomTests(tag: Tag) extends Table[(Long, Int, Int, Int, Array[Byte], Array[Byte], Array[Byte], DateTime,
+  case class CustomTests(tag: Tag) extends Table[(Long, Int, Int, Boolean, Int, Array[Byte], Array[Byte], Array[Byte], DateTime,
     Option[DateTime], Int, TimeMs, Memory, Long)](tag, "custom_test") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
     def contest = column[Int]("contest")
     def team = column[Int]("team_id")
+    def tested = column[Boolean]("tested")
     def language = column[Int]("language_id")
     def source = column[Array[Byte]]("source")
     def input = column[Array[Byte]]("input")
@@ -498,7 +499,7 @@ object SlickModel {
     def memoryBytes = column[Memory]("memory_bytes")
     def returnCode = column[Long]("return_code")
 
-    override def * = (id, contest, team, language, source, input, output, arrived,
+    override def * = (id, contest, team, tested, language, source, input, output, arrived,
       finishTime, resultCode, timeMs, memoryBytes, returnCode)
   }
 
