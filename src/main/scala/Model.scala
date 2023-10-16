@@ -18,6 +18,10 @@ case class ClarificationRequest(id: Long, contest: Int, team: Int, problem: Stri
   } else "..."
 }
 
+case class PolygonProblemCacheEntry(key: String, updated: DateTime, value: Array[Byte])
+
+case class PolygonContestCacheEntry(key: String, updated: DateTime, value: Array[Byte])
+
 case class AdminEntry(username: String, password: String, spectator: String, administrator: String,
                       locations: String, unrestricted: String)
 
@@ -536,7 +540,7 @@ object SlickModel {
 
   val results = TableQuery[Results]
 
-  val headResultByTesting = Compiled((testingID: Rep[Long]) => SlickModel.results.filter(_.testingID === testingID).sortBy(_.testID.desc).take(1))
+  val headResultByTesting = Compiled((testingID: Rep[Long]) => results.filter(_.testingID === testingID).sortBy(_.testID.desc).take(1))
 
   case class DBResultEntry(testingID: Long, testID: Int, resultCode: Int, recordTime: DateTime, timeMs: TimeMs, memoryBytes:Memory,
                            returnCode: Long, testerOutput: Array[Byte], testerError: Array[Byte], testerReturnCode: Long)
@@ -588,4 +592,28 @@ object SlickModel {
   private[this] val admins = TableQuery[Admins]
   val adminQuery = Compiled((username: Rep[String], passwordHash: Rep[String]) =>
     admins.filter(x => x.username === username && x.password === passwordHash).take(1))
+
+  case class PolygonProblemCache(tag: Tag) extends Table[PolygonProblemCacheEntry](tag, "polygon_problem_cache") {
+    def key = column[String]("key", O.PrimaryKey)
+    def updated = column[DateTime]("updated")
+    def value = column[Array[Byte]]("value")
+
+    override def * = (key, updated, value) <> (PolygonProblemCacheEntry.tupled, PolygonProblemCacheEntry.unapply)
+  }
+
+  private[this] val polygonProblemCache = TableQuery[PolygonProblemCache]
+  val polygonProblemQuery = Compiled((key: Rep[String]) => polygonProblemCache.filter(_.key === key).take(1))
+
+  case class PolygonContestCache(tag: Tag) extends Table[PolygonContestCacheEntry](tag, "polygon_contest_cache") {
+    def key = column[String]("key", O.PrimaryKey)
+
+    def updated = column[DateTime]("updated")
+
+    def value = column[Array[Byte]]("value")
+
+    override def * = (key, updated, value) <> (PolygonContestCacheEntry.tupled, PolygonContestCacheEntry.unapply)
+  }
+
+  private[this] val polygonContestCache = TableQuery[PolygonContestCache]
+  val polygonContestQuery = Compiled((key: Rep[String]) => polygonContestCache.filter(_.key === key).take(1))
 }
