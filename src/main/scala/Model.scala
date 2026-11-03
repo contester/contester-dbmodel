@@ -456,6 +456,47 @@ object SlickModel {
 
   val dbPrintJobs = TableQuery[DBPrintJobs]
 
+  case class DBPrintRender(id: Option[Long], jobId: Long, format: String, pages: Int, data: Array[Byte],
+                           created: DateTime)
+
+  case class DBPrintRenders(tag: Tag) extends Table[DBPrintRender](tag, "print_renders") {
+    def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
+    def jobId = column[Long]("job_id")
+    def format = column[String]("format")
+    def pages = column[Int]("pages")
+    def data = column[Array[Byte]]("data")
+    def created = column[DateTime]("created")
+
+    override def * = (id.?, jobId, format, pages, data, created) <> (DBPrintRender.tupled, DBPrintRender.unapply)
+  }
+
+  val dbPrintRenders = TableQuery[DBPrintRenders]
+
+  case class DBPrintAttempt(id: Option[Long], jobId: Long, kind: String, created: DateTime, requestedBy: Option[String],
+                            printer: String, renderId: Option[Long], status: String, finished: Option[DateTime],
+                            pagesPrinted: Int, spoolerJobId: Option[Long], error: String, detail: String)
+
+  case class DBPrintAttempts(tag: Tag) extends Table[DBPrintAttempt](tag, "print_attempts") {
+    def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
+    def jobId = column[Long]("job_id")
+    def kind = column[String]("kind")
+    def created = column[DateTime]("created")
+    def requestedBy = column[Option[String]]("requested_by")
+    def printer = column[String]("printer")
+    def renderId = column[Option[Long]]("render_id")
+    def status = column[String]("status")
+    def finished = column[Option[DateTime]]("finished")
+    def pagesPrinted = column[Int]("pages_printed")
+    def spoolerJobId = column[Option[Long]]("spooler_job_id")
+    def error = column[String]("error")
+    def detail = column[String]("detail")
+
+    override def * = (id.?, jobId, kind, created, requestedBy, printer, renderId, status, finished, pagesPrinted,
+      spoolerJobId, error, detail) <> (DBPrintAttempt.tupled, DBPrintAttempt.unapply)
+  }
+
+  val dbPrintAttempts = TableQuery[DBPrintAttempts]
+
   case class LiftedLocatedPrintJob(id: Rep[Long], contest: Rep[Int], team: Rep[Int], filename: Rep[String],
                                    arrived: Rep[DateTime], printed: Rep[Option[DateTime]], computerName: Rep[String],
                                    pages: Rep[Int], error: Rep[String])
