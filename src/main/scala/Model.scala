@@ -333,7 +333,7 @@ object SlickModel {
       contests0 on (_._1.contest === _.id)
   } yield LiftedLoggedInTeam0(assignment.username, assignment.password, contest, team)
 
-  case class Submits(tag: Tag) extends Table[(Long, Int, Int, String, Int, Array[Byte], DateTime, Boolean, Boolean, Int, Long, Int, Boolean)](tag, "submits") {
+  case class Submits(tag: Tag) extends Table[(Long, Int, Int, String, Int, Array[Byte], DateTime, Boolean, Boolean, Int, Option[Long], Int, Boolean)](tag, "submits") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
     def contest = column[Int]("contest")
     def team = column[Int]("team_id")
@@ -344,7 +344,7 @@ object SlickModel {
     def tested = column[Boolean]("tested")
     def success = column[Boolean]("success")
     def passed = column[Int]("passed")
-    def testingID = column[Long]("testing_id")
+    def testingID = column[Option[Long]]("testing_id")
     def taken = column[Int]("taken")
     def compiled = column[Boolean]("compiled")
 
@@ -376,11 +376,11 @@ object SlickModel {
   case class LiftedSubmit(id: Rep[Long], arrived: Rep[DateTime], arrivedSeconds: Rep[Period], afterFreeze: Rep[Boolean],
                           teamID: Rep[Int], contestID: Rep[Int], problemID: Rep[String], ext: Rep[String],
                           finished: Rep[Boolean], compiled: Rep[Boolean], passed: Rep[Int], taken: Rep[Int],
-                          testingID: Rep[Long])
+                          testingID: Rep[Option[Long]])
 
   case class UpliftedSubmit(id: Long, arrived: DateTime, arrivedSeconds: Period, afterFreeze: Boolean, teamID: Int,
                             contestID: Int, problemID: String, ext: String, finished: Boolean, compiled: Boolean,
-                            passed: Int, taken: Int, testingID: Long)
+                            passed: Int, taken: Int, testingID: Option[Long])
 
   implicit object SubmitShape extends CaseClassShape(LiftedSubmit.tupled, UpliftedSubmit.tupled)
 
@@ -417,7 +417,7 @@ object SlickModel {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
     def submit = column[Long]("submit")
     def startTime = column[DateTime]("start_time")
-    def problemURL = column[String]("problem_id")
+    def problemURL = column[String]("problem_url")
     def finishTime = column[Option[DateTime]]("finish_time")
 
     override def * = (id, submit, startTime, problemURL, finishTime)
