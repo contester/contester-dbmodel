@@ -622,6 +622,4 @@ object SlickModel {
   }
 
   val admins = TableQuery[Admins]
-  val adminQuery = Compiled((username: Rep[String], passwordHash: Rep[String]) =>
-    admins.filter(x => x.username === username && x.password === passwordHash).take(1))
 }
