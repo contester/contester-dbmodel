@@ -1,8 +1,5 @@
 name := "contester-dbmodel"
 
-javaOptions in run ++= Seq("-XX:+HeapDumpOnOutOfMemoryError", "-Xloggc:gclog.txt", "-Xms512m", "-Xmx512m",
-  "-XX:MaxPermSize=256m", "-XX:+CMSClassUnloadingEnabled")
-
 scalaVersion := "2.12.20"
 
 version := "2024.0.1-SNAPSHOT"
@@ -26,7 +23,6 @@ scalacOptions ++= Seq(
 updateOptions := updateOptions.value.withCachedResolution(true)
 
 resolvers ++= Seq(
-  Resolver.jcenterRepo,
   Resolver.typesafeRepo("releases")
 ) ++ Resolver.sonatypeOssRepos("snapshots")
 
