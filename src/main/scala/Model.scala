@@ -30,7 +30,7 @@ case class Message2(id: Option[Int], contest: Int, team: Int, kind: String, data
 case class Extrainfo(contest: Int, num: Int, heading: String, data: String)
 
 case class Contest(id: Int, name: String, startTime: DateTime, freezeTime: DateTime,
-                   endTime: DateTime, exposeTime: DateTime, polygonID: String, language: String, schoolMode: Boolean) {
+                   endTime: DateTime, exposeTime: DateTime, polygonID: Option[String], language: String, schoolMode: Boolean) {
   def frozen = {
     val now = DateTime.now
     now >= freezeTime && now < exposeTime
@@ -198,7 +198,7 @@ object SlickModel {
 
   case class LiftedContest(id: Rep[Int], name: Rep[String], startTime: Rep[DateTime],
                            freezeTime: Rep[DateTime], endTime: Rep[DateTime], exposeTime: Rep[DateTime],
-                           polygonId: Rep[String], language: Rep[String], schoolMode: Rep[Boolean])
+                           polygonId: Rep[Option[String]], language: Rep[String], schoolMode: Rep[Boolean])
 
   implicit object ContestShape extends CaseClassShape(LiftedContest.tupled, Contest.tupled)
 
@@ -209,7 +209,7 @@ object SlickModel {
     def freezeTime = column[DateTime]("freeze_time")
     def endTime = column[DateTime]("end_time")
     def exposeTime = column[DateTime]("expose_time")
-    def polygonId = column[String]("polygon_id")
+    def polygonId = column[Option[String]]("polygon_id")
     def language = column[String]("language")
     def schoolMode = column[Boolean]("school_mode")
 
@@ -426,8 +426,7 @@ object SlickModel {
   val testings = TableQuery[Testings]
 
   case class DBPrintJob(id: Option[Long], contest: Int, team: Int, filename: String, data: Array[Byte],
-                        computer: InetString, arrived: DateTime, printed: Option[DateTime],
-                        pages: Int, error: String)
+                        computer: InetString, arrived: DateTime)
 
   case class DBPrintJobs(tag: Tag) extends Table[DBPrintJob](tag, "print_jobs") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
@@ -437,11 +436,8 @@ object SlickModel {
     def data = column[Array[Byte]]("data")
     def computer = column[InetString]("computer_id")
     def arrived = column[DateTime]("arrived")
-    def printed = column[Option[DateTime]]("printed")
-    def pages = column[Int]("pages")
-    def error = column[String]("error")
 
-    override def * = (id.?, contest, team, filename, data, computer, arrived, printed, pages, error) <> (DBPrintJob.tupled, DBPrintJob.unapply)
+    override def * = (id.?, contest, team, filename, data, computer, arrived) <> (DBPrintJob.tupled, DBPrintJob.unapply)
   }
 
   val dbPrintJobs = TableQuery[DBPrintJobs]
@@ -487,6 +483,23 @@ object SlickModel {
 
   val dbPrintAttempts = TableQuery[DBPrintAttempts]
 
+  /** Row of the print_job_state view: the state of a job is its latest attempt's (read-only). */
+  case class DBPrintJobState(jobId: Long, attemptId: Option[Long], status: String, finished: Option[DateTime],
+                             error: String, pages: Int)
+
+  case class DBPrintJobStates(tag: Tag) extends Table[DBPrintJobState](tag, "print_job_state") {
+    def jobId = column[Long]("job_id")
+    def attemptId = column[Option[Long]]("attempt_id")
+    def status = column[String]("status")
+    def finished = column[Option[DateTime]]("finished")
+    def error = column[String]("error")
+    def pages = column[Int]("pages")
+
+    override def * = (jobId, attemptId, status, finished, error, pages) <> (DBPrintJobState.tupled, DBPrintJobState.unapply)
+  }
+
+  val dbPrintJobStates = TableQuery[DBPrintJobStates]
+
   case class LiftedLocatedPrintJob(id: Rep[Long], contest: Rep[Int], team: Rep[Int], filename: Rep[String],
                                    arrived: Rep[DateTime], printed: Rep[Option[DateTime]], computerName: Rep[String],
                                    pages: Rep[Int], error: Rep[String])
@@ -511,7 +524,8 @@ object SlickModel {
   val locatedPrintJobs = (for {
     p <- dbPrintJobs
     l <- compLocations if p.computer === l.id
-  } yield LiftedLocatedPrintJob(p.id, p.contest, p.team, p.filename, p.arrived, p.printed, l.name, p.pages, p.error)).sortBy(_.arrived.desc)
+    s <- dbPrintJobStates if s.jobId === p.id
+  } yield LiftedLocatedPrintJob(p.id, p.contest, p.team, p.filename, p.arrived, s.finished, l.name, s.pages, s.error)).sortBy(_.arrived.desc)
 
   val locatedPrintJobsByContest = Compiled((contestID: Rep[Int]) =>
     locatedPrintJobs.filter(_.contest === contestID)

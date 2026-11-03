@@ -41,6 +41,7 @@ class SchemaDriftSpec extends AnyFunSuite {
     "print_jobs" -> dbPrintJobs.take(0).result,
     "print_renders" -> dbPrintRenders.take(0).result,
     "print_attempts" -> dbPrintAttempts.take(0).result,
+    "print_job_state (view)" -> dbPrintJobStates.take(0).result,
     "computer_locations" -> compLocations.take(0).result,
     "custom_test" -> customTests.take(0).result,
     "results" -> results.take(0).result,
