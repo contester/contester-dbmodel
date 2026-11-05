@@ -33,7 +33,8 @@ case class Contest(id: Int, name: String, startTime: DateTime, freezeTime: DateT
                    endTime: DateTime, exposeTime: DateTime, polygonID: Option[String], language: String, schoolMode: Boolean) {
   def frozen = {
     val now = DateTime.now
-    now >= freezeTime && now < exposeTime
+    // freezeTime == endTime means "no freeze"
+    freezeTime.isBefore(endTime) && now >= freezeTime && now < exposeTime
   }
   def finished = DateTime.now >= endTime
   def started = DateTime.now >= startTime
