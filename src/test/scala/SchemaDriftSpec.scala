@@ -46,6 +46,7 @@ class SchemaDriftSpec extends AnyFunSuite {
     "custom_test" -> customTests.take(0).result,
     "results" -> results.take(0).result,
     "areas" -> areas.take(0).result,
+    "agent_printers" -> agentPrinters.take(0).result,
     "waiter_tasks" -> waiterTasks.take(0).result,
     "waiter_task_record" -> waiterTaskRecords.take(0).result,
     "admins" -> admins.take(0).result,

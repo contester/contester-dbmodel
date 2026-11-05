@@ -603,6 +603,23 @@ object SlickModel {
 
   val areas = TableQuery[Areas]
 
+  /** A network printer that a print agent reported it can print to. */
+  case class AgentPrinter(agent: String, unc: String, server: String, share: String, seen: DateTime)
+
+  case class AgentPrinters(tag: Tag) extends Table[AgentPrinter](tag, "agent_printers") {
+    def agent = column[String]("agent")
+    def unc = column[String]("unc")
+    def server = column[String]("server")
+    def share = column[String]("share")
+    def seen = column[DateTime]("seen")
+
+    def pk = primaryKey("agent_printers_pkey", (agent, unc))
+
+    override def * = (agent, unc, server, share, seen) <> (AgentPrinter.tupled, AgentPrinter.unapply)
+  }
+
+  val agentPrinters = TableQuery[AgentPrinters]
+
   case class WaiterTasks(tag: Tag) extends Table[(Long, DateTime, String, String)](tag, "waiter_tasks") {
     def id = column[Long]("id", O.AutoInc, O.PrimaryKey)
     def created = column[DateTime]("created")
