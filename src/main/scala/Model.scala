@@ -70,6 +70,8 @@ trait Team {
   /** Out of competition. Always true for a disqualified team: the flag is the effective one, not the raw column. */
   def notRated: Boolean
   def disqualified: Boolean
+  /** Not on any board, and scores nothing. */
+  def disabled: Boolean
   def id: Int
 
   private[this] def teamSuffix = if (teamNum != 0) {
