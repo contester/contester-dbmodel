@@ -67,7 +67,9 @@ trait Team {
   def schoolShortName: String
   def teamNum: Int
   def teamName: String
+  /** Out of competition. Always true for a disqualified team: the flag is the effective one, not the raw column. */
   def notRated: Boolean
+  def disqualified: Boolean
   def id: Int
 
   private[this] def teamSuffix = if (teamNum != 0) {
@@ -82,7 +84,8 @@ trait Team {
 }
 
 final case class LocalTeam(id: Int, contest: Int, schoolFullName: String, schoolShortName: String, teamNum: Int, teamName: String,
-                     notRated: Boolean, noPrint: Boolean, disabled: Boolean) extends Team
+                     notRated: Boolean, noPrint: Boolean, disabled: Boolean,
+                     disqualified: Boolean = false) extends Team
 
 case class ContestTeamIds(contestId: Int, teamId: Int)
 
@@ -131,7 +134,8 @@ object SlickModel {
 
   case class Team(id: Int, school: Int, num: Int, name: String)
 
-  case class Participant(contest: Int, team: Int, disabled: Boolean, noPrint: Boolean, notRated: Boolean)
+  case class Participant(contest: Int, team: Int, disabled: Boolean, noPrint: Boolean, notRated: Boolean,
+                         disqualified: Boolean = false)
 
   case class Assignment(contest: Int, teamId: Int, username: String, password: String)
 
@@ -262,9 +266,10 @@ object SlickModel {
     def disabled = column[Boolean]("disabled")
     def noPrint = column[Boolean]("no_print")
     def notRated = column[Boolean]("not_rated")
+    def disqualified = column[Boolean]("disqualified")
 
     def pk = primaryKey("participants_pkey", (contest, team))
-    override def * = (contest, team, disabled, noPrint, notRated) <> (Participant.tupled, Participant.unapply)
+    override def * = (contest, team, disabled, noPrint, notRated, disqualified) <> (Participant.tupled, Participant.unapply)
   }
 
   val participants = TableQuery[Participants]
@@ -314,13 +319,13 @@ object SlickModel {
 
   case class LiftedLocalTeam(teamId: Rep[Int], contest: Rep[Int], schoolFullName: Rep[String], schoolShortName: Rep[String], teamNum: Rep[Int],
                              teamName: Rep[String], notRated: Rep[Boolean], noPrint: Rep[Boolean],
-                             disabled: Rep[Boolean])
+                             disabled: Rep[Boolean], disqualified: Rep[Boolean])
 
   implicit object LocalTeamShape extends CaseClassShape(LiftedLocalTeam.tupled, LocalTeam.tupled)
 
   val localTeamQuery = for {
     ((p, t), s) <- participants join teams on (_.team === _.id) join schools on (_._2.school === _.id)
-  } yield LiftedLocalTeam(p.team, p.contest, s.fullName, s.shortName, t.num, t.name, p.notRated, p.noPrint, p.disabled)
+  } yield LiftedLocalTeam(p.team, p.contest, s.fullName, s.shortName, t.num, t.name, p.notRated || p.disqualified, p.noPrint, p.disabled, p.disqualified)
 
   case class LoggedInTeam0(username: String, password: String,  contest: Contest, team: LocalTeam)
 
