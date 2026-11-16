@@ -583,12 +583,10 @@ object SlickModel {
     def timeMs = column[TimeMs]("time_ms")
     def memoryBytes = column[Memory]("memory_bytes")
     def returnCode = column[Long]("return_code")
-    def testerOutput = column[Array[Byte]]("tester_output")
-    def testerError = column[Array[Byte]]("tester_error")
     def testerReturnCode = column[Long]("tester_return_code")
 
-    override def * = (testingID, testID, resultCode, recordTime, timeMs, memoryBytes, returnCode, testerOutput,
-      testerError, testerReturnCode) <> (DBResultEntry.tupled, DBResultEntry.unapply)
+    override def * = (testingID, testID, resultCode, recordTime, timeMs, memoryBytes, returnCode,
+      testerReturnCode) <> (DBResultEntry.tupled, DBResultEntry.unapply)
   }
 
   val results = TableQuery[Results]
@@ -596,7 +594,7 @@ object SlickModel {
   val headResultByTesting = Compiled((testingID: Rep[Long]) => results.filter(_.testingID === testingID).sortBy(_.testID.desc).take(1))
 
   case class DBResultEntry(testingID: Long, testID: Int, resultCode: Int, recordTime: DateTime, timeMs: TimeMs, memoryBytes:Memory,
-                           returnCode: Long, testerOutput: Array[Byte], testerError: Array[Byte], testerReturnCode: Long)
+                           returnCode: Long, testerReturnCode: Long)
 
   val results0 = results.sortBy(_.testID)
 
