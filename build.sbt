@@ -34,7 +34,7 @@ libraryDependencies ++= Seq(
   "com.github.nscala-time" %% "nscala-time" % "2.32.0",
   "com.typesafe.slick" %% "slick" % "3.4.1",
   "com.typesafe.slick" %% "slick-hikaricp" % "3.4.1",
-  "org.postgresql" % "postgresql" % "42.7.3",
+  "org.postgresql" % "postgresql" % "42.7.14",
   "com.github.tminglei" %% "slick-pg" % slickPG,
   "com.github.tminglei" %% "slick-pg_joda-time" % slickPG,
   "com.github.tminglei" %% "slick-pg_play-json" % slickPG,
