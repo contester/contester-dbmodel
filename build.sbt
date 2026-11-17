@@ -1,6 +1,6 @@
 name := "contester-dbmodel"
 
-scalaVersion := "2.12.20"
+scalaVersion := "2.12.21"
 
 version := "2024.0.1-SNAPSHOT"
 
@@ -24,7 +24,7 @@ updateOptions := updateOptions.value.withCachedResolution(true)
 
 resolvers ++= Seq(
   Resolver.typesafeRepo("releases")
-) ++ Resolver.sonatypeOssRepos("snapshots")
+)
 
 val slickPG = "0.21.1"
 
